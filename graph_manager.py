@@ -40,7 +40,7 @@ class GraphManager:
         })
         
         # Título principal
-        self.fig.suptitle('📊 Análisis Visual Completo de Resultados', 
+        self.fig.suptitle(' Análisis Visual Completo de Resultados', 
                          fontsize=14, fontweight='bold', color='#2C3E50')
         
         # Frame contenedor con scrollbar

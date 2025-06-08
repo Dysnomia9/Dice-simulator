@@ -104,7 +104,7 @@ class SimuladorDados:
     def create_control_frame(self, parent):
         """Frame de controles de simulación"""
         control_frame = tk.LabelFrame(parent, 
-                                     text=" 🎯 Controles de Simulación ",
+                                     text="  Controles de Simulación ",
                                      font=('Arial', 12, 'bold'),
                                      bg=self.colores['bg_frame'],
                                      fg=self.colores['texto_principal'],

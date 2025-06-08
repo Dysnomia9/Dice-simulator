@@ -5,6 +5,6 @@ __version__ = "1.0.0"
 __author__ = "Simulador de Dados"
 
 # Importaciones opcionales para facilitar el uso
-from .main_window import SimuladorDados
+from main_window import SimuladorDados
 
 __all__ = ['SimuladorDados']
