@@ -28,11 +28,9 @@ class GraphManager:
         """Crear la figura y canvas para los gráficos"""
         # Frame contenedor principal
         self.container_frame = tk.Frame(self.parent_frame, bg=self.colores['bg_frame'])
-        
-        # ---> INICIO DE LA MODIFICACIÓN <---
-        # Cambiar de pack a grid para que respete la configuración del padre
+
         self.container_frame.grid(row=0, column=0, sticky='nsew') #
-        # ---> FIN DE LA MODIFICACIÓN <---
+
         
         # Configurar el frame contenedor para que se expanda completamente
         self.container_frame.grid_rowconfigure(0, weight=1) #
