@@ -4,6 +4,8 @@ from collections import Counter
 from typing import Dict, List, Tuple, Optional
 import json
 from datetime import datetime
+import matplotlib.pyplot as plt
+
 
 class DiceSimulator:
     def __init__(self):
@@ -361,3 +363,100 @@ class DiceSimulator:
         
         texto += "\n"
         return texto
+    
+    def limpiar_todo(self):
+        """Limpia todos los resultados almacenados"""
+        self.resultados_1_dado = []
+        self.resultados_2_dados = []
+        self.resultados_3_dados = []
+        self.resultados_detallados = {"1": [], "2": [], "3": []}
+        self.total_lanzamientos = {"1": 0, "2": 0, "3": 0}
+        self.historial_simulaciones = []
+    
+    def actualizar_tablas_mejoradas(self):
+        """Actualizar todas las tablas con los resultados actuales."""
+        if not hasattr(self, 'tables'):
+            return
+        try:
+            import matplotlib.pyplot as plt
+            
+            # 1. Limpiar tablas existentes
+            for i in range(1, 4):
+                self.resultados_detallados[str(i)] = []
+            
+            # 2. Resultados para 1 dado
+            if self.resultados_1_dado:
+                estadisticas_1_dado = self.calcular_estadisticas_avanzadas(self.resultados_1_dado)
+                self.resultados_detallados["1"].append({
+                    'estadisticas': estadisticas_1_dado,
+                    'histograma': self.generar_histograma(self.resultados_1_dado, 1)
+                })
+            
+            # 3. Resultados para 2 dados
+            if self.resultados_2_dados:
+                estadisticas_2_dados = self.calcular_estadisticas_avanzadas(self.resultados_2_dados)
+                self.resultados_detallados["2"].append({
+                    'estadisticas': estadisticas_2_dados,
+                    'histograma': self.generar_histograma(self.resultados_2_dados, 2)
+                })
+            
+            # 4. Resultados para 3 dados
+            if self.resultados_3_dados:
+                estadisticas_3_dados = self.calcular_estadisticas_avanzadas(self.resultados_3_dados)
+                self.resultados_detalladas["3"].append({
+                    'estadisticas': estadisticas_3_dados,
+                    'histograma': self.generar_histograma(self.resultados_3_dados, 3)
+                })
+            
+            # 5. Guardar gráficas
+            for i in range(1, 4):
+                if self.resultados_detallados[str(i)]:
+                    self.guardar_grafica_histograma(f"histograma_{i}_dados.png", self.resultados_detallados[str(i)][0]['histograma'])
+            
+            return True
+        
+        except Exception as e:
+            print(f"Error actualizando tablas mejoradas: {e}")
+            return False
+    
+    def generar_histograma(self, datos: List[int], num_dados: int):
+        """Genera un histograma de frecuencias para los resultados"""
+        try:
+            fig, ax = plt.subplots()
+            contador = Counter(datos)
+            caras = list(range(1, 7))
+            frecuencias = [contador.get(cara, 0) for cara in caras]
+            
+            ax.bar(caras, frecuencias, color='blue', alpha=0.7)
+            ax.set_xlabel('Cara del dado')
+            ax.set_ylabel('Frecuencia')
+            ax.set_title(f'Histograma de Resultados - {num_dados} Dado(s)')
+            ax.set_xticks(caras)
+            ax.set_xticklabels(caras)
+            
+            # Línea de media
+            media = np.mean(datos)
+            ax.axvline(media, color='red', linestyle='dashed', linewidth=1, label=f'Media: {media:.2f}')
+            
+            # Leyenda
+            ax.legend()
+            
+            # Ajustar diseño
+            plt.tight_layout()
+            
+            return fig
+        
+        except Exception as e:
+            print(f"Error generando histograma: {e}")
+            return None
+    
+    def guardar_grafica_histograma(self, archivo: str, figura):
+        """Guarda la gráfica del histograma en un archivo"""
+        try:
+            if figura is not None:
+                figura.savefig(archivo)
+                print(f"Gráfica guardada en: {archivo}")
+            else:
+                print("No se pudo guardar la gráfica: figura es None")
+        except Exception as e:
+            print(f"Error guardando gráfica: {e}")

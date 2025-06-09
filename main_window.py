@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox, scrolledtext
 import threading
 import time
 from datetime import datetime
+from collections import Counter
+import numpy as np
 
 from graph_manager import GraphManager
 from dice_simulator import DiceSimulator
@@ -155,7 +157,7 @@ class SimuladorDados:
         status_bar.grid(row=3, column=0, sticky='ew', padx=10, pady=(5,0))
 
     def create_notebook(self, parent):
-        """Crear el notebook con pestañas para gráficos y análisis."""
+        """Crear el notebook con pestañas para gráficos, análisis y tablas."""
         notebook_container = tk.Frame(parent, bg=self.colores['bg_principal'])
         notebook_container.grid(row=2, column=0, sticky='nsew')
         notebook_container.grid_rowconfigure(0, weight=1)
@@ -186,84 +188,33 @@ class SimuladorDados:
         # Frame real donde van los gráficos
         self.graph_frame = tk.Frame(self.graph_canvas, bg=self.colores['bg_secundario'])
         self.graph_frame.grid(row=0, column=0, sticky='nsew')
-        self.graph_frame.grid_rowconfigure(0, weight=1)
-        self.graph_frame.grid_columnconfigure(0, weight=1)
 
-        # Crear ventana dentro del canvas y ajustar tamaño mínimo
+        # Crear ventana dentro del canvas
         self.graph_window_id = self.graph_canvas.create_window(
             (0, 0), 
             window=self.graph_frame, 
-            anchor='nw',
-            width=self.graph_canvas.winfo_width(),
-            height=self.graph_canvas.winfo_height()  # Añadir altura
+            anchor='nw'
         )
 
-        def _on_frame_configure(event):
-            """Actualizar scrollregion cuando el frame interno cambia"""
-            # Actualizar tamaño total del contenido
-            bbox = self.graph_frame.bbox("all")
-            
-            # Asegurar altura mínima del contenido
-            min_height = max(self.graph_canvas.winfo_height(), self.graph_frame.winfo_reqheight())
-            
-            # Configurar región scrollable con altura adecuada
-            self.graph_canvas.configure(
-                scrollregion=(
-                    bbox[0],  # x inicio
-                    bbox[1],  # y inicio
-                    bbox[2],  # x fin
-                    max(bbox[3], min_height * 2)  
-                )
-            )
-            
-            # Actualizar tamaño de la ventana interna
-            canvas_width = self.graph_canvas.winfo_width()
-            if canvas_width > 1:
-                self.graph_canvas.itemconfig(
-                    self.graph_window_id,
-                    width=canvas_width,
-                    height=max(bbox[3], min_height * 2)
-                )
-
-        def _on_canvas_configure(event):
-            """Actualizar tamaño cuando el canvas cambia"""
-            width = event.width
-            height = event.height
-            if width > 1 and height > 1:
-                # Actualizar tamaño del contenido
-                content_height = max(height * 2, self.graph_frame.winfo_reqheight())
-                self.graph_canvas.itemconfig(
-                    self.graph_window_id,
-                    width=width,
-                    height=content_height
-                )
-                # Actualizar región scrollable
-                self.graph_canvas.configure(scrollregion=(0, 0, width, content_height))
-
-        # Vincular eventos
-        self.graph_frame.bind("<Configure>", _on_frame_configure)
-        self.graph_canvas.bind('<Configure>', _on_canvas_configure)
-
-        # Configurar scroll con el mouse
-        def _on_mousewheel(event):
-            self.graph_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        
-        # Vincular evento de rueda solo cuando el mouse está sobre el canvas
-        self.graph_canvas.bind('<Enter>', lambda e: self.graph_canvas.bind_all("<MouseWheel>", _on_mousewheel))
-        self.graph_canvas.bind('<Leave>', lambda e: self.graph_canvas.unbind_all("<MouseWheel>"))
+        # Configurar eventos para el canvas de gráficos
+        self._setup_graph_scroll_events()
 
         # Añadir pestañas al notebook
-        self.notebook.add(self.graph_outer, text="GRÁFICOS VISUALES")
+        self.notebook.add(self.graph_outer, text="RESULTADOS GRÁFICOS")
+
 
         # Pestaña de Análisis
         self.analysis_frame = tk.Frame(self.notebook, bg=self.colores['bg_secundario'])
         self.notebook.add(self.analysis_frame, text="ANÁLISIS DETALLADO")
         
-        # Inicializar el gestor de gráficos
-        self.graph_manager = GraphManager(self.graph_frame, self.colores)
+        # Nueva pestaña de Tablas
+        self.tables_frame = tk.Frame(self.notebook, bg=self.colores['bg_secundario'])
+        self.notebook.add(self.tables_frame, text="TABLAS DE FRECUENCIA")
         
-        # Crear el área de texto para el análisis
+        # Inicializar componentes
+        self.graph_manager = GraphManager(self.graph_frame, self.colores)
         self.create_analysis_area()
+        self.create_frequency_tables()
 
     def _limit_graph_width(self, event):
         """Ajusta el ancho del frame interno al del canvas."""
@@ -316,6 +267,7 @@ class SimuladorDados:
         """Actualizar la GUI cuando la simulación termina."""
         self.graph_manager.update_graphs(self.simulator)
         self.actualizar_analisis()
+        self.actualizar_tablas_mejoradas()  # Nueva llamada
         self.simulacion_activa = False
         self.btn_simular.config(state='normal', text="SIMULAR")
         self.status_var.set("Simulación completada.")
@@ -342,4 +294,259 @@ class SimuladorDados:
             self.text_analysis.delete(1.0, tk.END)
             self.text_analysis.insert(tk.END, "Resultados limpiados. Listo para nueva simulación.")
             self.text_analysis.config(state=tk.DISABLED)
+            
+            # Limpiar tablas
+            if hasattr(self, 'tables'):
+                for tree in self.tables.values():
+                    for item in tree.get_children():
+                        tree.delete(item)
+                        
             self.status_var.set("Listo para simular.")
+
+
+    def _setup_graph_scroll_events(self):
+        """Configurar eventos de scroll para el canvas de gráficos."""
+        def _on_frame_configure(event):
+            """Actualizar scrollregion cuando cambia el tamaño del frame interno."""
+            bbox = self.graph_frame.bbox("all")
+            min_height = max(self.graph_canvas.winfo_height(), self.graph_frame.winfo_reqheight())
+            self.graph_canvas.configure(
+                scrollregion=(
+                    bbox[0], bbox[1], bbox[2], max(bbox[3], min_height * 2)
+                )
+            )
+            canvas_width = self.graph_canvas.winfo_width()
+            if canvas_width > 1:
+                self.graph_canvas.itemconfig(
+                    self.graph_window_id,
+                    width=canvas_width,
+                    height=max(bbox[3], min_height * 2)
+                )
+
+        def _on_canvas_configure(event):
+            """Ajustar el tamaño de la ventana interna cuando cambia el tamaño del canvas."""
+            width = event.width
+            height = event.height
+            if width > 1 and height > 1:
+                content_height = max(height * 2, self.graph_frame.winfo_reqheight())
+                self.graph_canvas.itemconfig(
+                    self.graph_window_id,
+                    width=width,
+                    height=content_height
+                )
+                self.graph_canvas.configure(scrollregion=(0, 0, width, content_height))
+
+        def _on_mousewheel(event):
+            """Manejar el evento de scroll del mouse."""
+            self.graph_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        # Vincular eventos
+        self.graph_frame.bind("<Configure>", _on_frame_configure)
+        self.graph_canvas.bind('<Configure>', _on_canvas_configure)
+        self.graph_canvas.bind('<Enter>', 
+                              lambda e: self.graph_canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        self.graph_canvas.bind('<Leave>', 
+                              lambda e: self.graph_canvas.unbind_all("<MouseWheel>"))
+
+    def create_frequency_tables(self):
+        """Crear tablas de frecuencias con análisis estadístico y scroll."""
+        # Frame contenedor principal (ya existe como self.tables_frame)
+        for widget in self.tables_frame.winfo_children():
+            widget.destroy()  # Limpia si ya existe
+
+        # Canvas y Scrollbar para las tablas
+        canvas_frame = tk.Frame(self.tables_frame, bg=self.colores['bg_principal'])
+        canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        self.tables_canvas = tk.Canvas(canvas_frame, bg=self.colores['bg_principal'], highlightthickness=0)
+        self.tables_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.tables_v_scrollbar = ttk.Scrollbar(canvas_frame, orient="vertical", command=self.tables_canvas.yview)
+        self.tables_v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.tables_canvas.configure(yscrollcommand=self.tables_v_scrollbar.set)
+
+        # Frame interno scrollable
+        self.tables_scrollable_frame = tk.Frame(self.tables_canvas, bg=self.colores['bg_principal'])
+        self.tables_canvas.create_window((0, 0), window=self.tables_scrollable_frame, anchor="nw")
+
+        # Ajustar el scrollregion cuando cambie el tamaño del frame interno
+        def on_frame_configure(event):
+            self.tables_canvas.configure(scrollregion=self.tables_canvas.bbox("all"))
+        self.tables_scrollable_frame.bind("<Configure>", on_frame_configure)
+
+        # Diccionario para almacenar las tablas
+        self.tables = {}
+
+        # Crear las diferentes tablas
+        self.tables['resumen'] = self._create_table_section(
+            "RESUMEN GENERAL",
+            ["Parámetro", "Valor", "Descripción"],
+            height=6,
+            parent=self.tables_scrollable_frame
+        )
+        self.tables['distribucion'] = self._create_table_section(
+            "DISTRIBUCIÓN DE SEISES",
+            ["Seises", "Frecuencia", "Porcentaje", "Prob. Exp.", "Prob. Teórica"],
+            height=7,
+            parent=self.tables_scrollable_frame
+        )
+        self.tables['frecuencias'] = self._create_table_section(
+            "FRECUENCIAS POR CARA",
+            ["Cara", "Frecuencia", "Porcentaje", "Esperado", "Diferencia"],
+            height=7,
+            parent=self.tables_scrollable_frame
+        )
+
+        # Configurar eventos de scroll
+        self._setup_tables_scroll_events()
+
+    def _create_table_section(self, title, columns, height=6, parent=None):
+        """Crear una sección de tabla con título."""
+        if parent is None:
+            parent = self.tables_frame
+        frame = tk.Frame(parent, bg=self.colores['bg_secundario'])
+        frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        # Título de la sección
+        tk.Label(frame, 
+                 text=title,
+                 font=('Segoe UI', 12, 'bold'),
+                 bg=self.colores['bg_secundario'],
+                 fg='white').pack(pady=5)
+        
+        # Crear y configurar tabla
+        tree = ttk.Treeview(frame, columns=columns, show='headings', height=height, style="Custom.Treeview")
+        
+        # Configurar columnas
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor=tk.CENTER, minwidth=100, width=150)
+        
+        tree.pack(fill=tk.X, padx=5, pady=5)
+        return tree
+
+    def _setup_tables_scroll_events(self):
+        """Configurar eventos de scroll para las tablas."""
+        def _on_mousewheel(event):
+            self.tables_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.tables_canvas.bind('<Enter>', lambda e: self.tables_canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        self.tables_canvas.bind('<Leave>', lambda e: self.tables_canvas.unbind_all("<MouseWheel>"))
+        self.tables_canvas.bind('<Enter>', lambda e: self.tables_canvas.bind_all("<Shift-MouseWheel>", _on_mousewheel))
+        self.tables_canvas.bind('<Leave>', lambda e: self.tables_canvas.unbind_all("<Shift-MouseWheel>"))
+
+    def actualizar_tablas_mejoradas(self):
+        """Actualizar todas las tablas con los resultados actuales."""
+        if not hasattr(self, 'tables'):
+            return
+
+        num_dados = int(self.combo_dados.get())
+        resultados = getattr(self.simulator, f'resultados_{num_dados}_dado' + ('s' if num_dados > 1 else ''), [])
+
+        if not resultados:
+            return
+
+        # Limpiar tablas existentes
+        for tree in self.tables.values():
+            for item in tree.get_children():
+                tree.delete(item)
+
+        # Actualizar tabla de resumen
+        total = len(resultados)
+        if num_dados == 1:
+            media = sum(resultados) / total if total > 0 else 0
+            self.tables['resumen'].insert('', tk.END, values=(
+                "Total lanzamientos", f"{total:,}", "Número de experimentos"
+            ))
+            self.tables['resumen'].insert('', tk.END, values=(
+                "Media de caras", f"{media:.4f}", "Promedio de la cara obtenida"
+            ))
+
+            # Tabla de distribución: SOLO 0 o 1 seis
+            seises = sum(1 for x in resultados if x == 6)
+            no_seises = total - seises
+            prob_teoricas = self.simulator.calcular_probabilidades_teoricas(1)
+            # 0 seises
+            self.tables['distribucion'].insert('', tk.END, values=(
+                "0",
+                f"{no_seises:,}",
+                f"{(no_seises / total * 100):.2f}%",
+                f"{no_seises / total:.4f}",
+                f"{5/6:.4f}"
+            ))
+            # 1 seis
+            self.tables['distribucion'].insert('', tk.END, values=(
+                "1",
+                f"{seises:,}",
+                f"{(seises / total * 100):.2f}%",
+                f"{seises / total:.4f}",
+                f"{1/6:.4f}"
+            ))
+
+            # Tabla de frecuencias: frecuencia de cada cara
+            contador = Counter(resultados)
+            esperado = total / 6 if total > 0 else 0
+            for cara in range(1, 7):
+                freq = contador.get(cara, 0)
+                porcentaje = (freq / total * 100) if total > 0 else 0
+                diferencia = freq - esperado
+                self.tables['frecuencias'].insert('', tk.END, values=(
+                    str(cara),
+                    f"{freq:,}",
+                    f"{porcentaje:.2f}%",
+                    f"{esperado:.1f}",
+                    f"{diferencia:+.1f}"
+                ))
+        else:
+            media = sum(resultados) / total if total > 0 else 0
+            self.tables['resumen'].insert('', tk.END, values=(
+                "Total lanzamientos", f"{total:,}", "Número de experimentos"
+            ))
+            self.tables['resumen'].insert('', tk.END, values=(
+                "Media de seises", f"{media:.4f}", "Promedio por lanzamiento"
+            ))
+
+            # Actualizar tabla de distribución
+            contador = Counter(resultados)
+            prob_teoricas = self.simulator.calcular_probabilidades_teoricas(num_dados)
+            for i in range(num_dados + 1):
+                freq = contador.get(i, 0)
+                porcentaje = (freq / total * 100) if total > 0 else 0
+                prob_exp = freq / total if total > 0 else 0
+                prob_teo = prob_teoricas.get(f"{i}_seises", 0)
+                self.tables['distribucion'].insert('', tk.END, values=(
+                    str(i),
+                    f"{freq:,}",
+                    f"{porcentaje:.2f}%",
+                    f"{prob_exp:.4f}",
+                    f"{prob_teo:.4f}"
+                ))
+
+            if hasattr(self.simulator, 'resultados_detallados'):
+                detalles = self.simulator.resultados_detallados.get(str(num_dados), [])
+                caras_contador = Counter()
+                for detalle in detalles:
+                    if isinstance(detalle, dict) and 'dados' in detalle:
+                        if isinstance(detalle['dados'], list):
+                            for cara in detalle['dados']:
+                                caras_contador[cara] += 1
+                        else:
+                            caras_contador[detalle['dados']] += 1
+                    else:
+                        caras_contador[detalle] += 1
+
+                total_caras = sum(caras_contador.values())
+                esperado = total_caras / 6 if total_caras > 0 else 0
+
+                for cara in range(1, 7):
+                    freq = caras_contador.get(cara, 0)
+                    porcentaje = (freq / total_caras * 100) if total_caras > 0 else 0
+                    diferencia = freq - esperado
+
+                    self.tables['frecuencias'].insert('', tk.END, values=(
+                        str(cara),
+                        f"{freq:,}",
+                        f"{porcentaje:.2f}%",
+                        f"{esperado:.1f}",
+                        f"{diferencia:+.1f}"
+                    ))
