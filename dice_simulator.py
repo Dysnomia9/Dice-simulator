@@ -149,24 +149,7 @@ class DiceSimulator:
             print(f"Error en simulación tradicional: {e}")
             return False
     
-    def test_chi_cuadrado(self, observados: List[int], esperados: List[float]) -> Dict[str, float]:
-        """Realiza test de chi-cuadrado para bondad de ajuste"""
-        if len(observados) != len(esperados) or sum(esperados) == 0:
-            return {"chi2": 0, "p_valor": 1, "grados_libertad": 0}
-        
-        chi2 = sum((obs - esp)**2 / esp for obs, esp in zip(observados, esperados) if esp > 0)
-        grados_libertad = len(observados) - 1
-        
-        # Aproximación p-valor (simplificada)
-        # En una implementación completa usarías scipy.stats.chi2
-        p_valor = 0.5 if chi2 < grados_libertad else 0.1
-        
-        return {
-            "chi2": chi2,
-            "p_valor": p_valor,
-            "grados_libertad": grados_libertad
-        }
-    
+   
     def limpiar_resultados(self):
         """Limpia todos los resultados almacenados"""
         self.resultados_1_dado = []
@@ -213,18 +196,10 @@ class DiceSimulator:
         texto += " DISTRIBUCIÓN DE RESULTADOS:\n"
         texto += "─" * 50 + "\n"
         
-        chi2_observados = []
-        chi2_esperados = []
-        
         for i in range(1, 7):
             count = contador.get(i, 0)
             prob_exp = count / total if total > 0 else 0
             prob_teo = prob_teoricas[f"sacar_{i}"]
-            esperado = prob_teo * total
-            
-            chi2_observados.append(count)
-            chi2_esperados.append(esperado)
-            
             texto += f"   Cara {i}: {count:6,} | Exp: {prob_exp:.4f} | Teó: {prob_teo:.4f}\n"
         
         # Estadísticas descriptivas
@@ -235,14 +210,6 @@ class DiceSimulator:
         texto += f"   Moda:                {estadisticas['moda']:.0f}\n"
         texto += f"   Desviación estándar: {estadisticas['desviacion_estandar']:.3f}\n"
         texto += f"   Varianza:            {estadisticas['varianza']:.3f}\n"
-        
-        # Test de bondad de ajuste
-        chi2_resultado = self.test_chi_cuadrado(chi2_observados, chi2_esperados)
-        texto += f"\n TEST DE BONDAD DE AJUSTE (Chi-cuadrado):\n"
-        texto += "─" * 50 + "\n"
-        texto += f"   Chi² = {chi2_resultado['chi2']:.3f}\n"
-        texto += f"   Grados de libertad = {chi2_resultado['grados_libertad']}\n"
-        texto += f"   P-valor ≈ {chi2_resultado['p_valor']:.3f}\n"
         
         # Probabilidad específica de 6
         seises = contador.get(6, 0)
@@ -267,6 +234,7 @@ class DiceSimulator:
         
         texto += "\n"
         return texto
+
     
     def analizar_dos_dados(self) -> str:
         """Análisis mejorado para 2 dados"""
