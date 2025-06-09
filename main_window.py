@@ -32,15 +32,20 @@ class SimuladorDados:
             self.root.destroy()
 
     def setup_colors(self):
-        """Definir esquema de colores."""
         self.colores = {
-            'bg_principal': '#1a1a2e', 'bg_secundario': '#16213e',
-            'bg_frame': '#0f3460', 'bg_card': '#e94560',
-            'bg_accent': '#0f4c75', 'bg_boton_primary': '#e94560',
-            'bg_boton_hover': '#d63447', 'bg_boton_danger': '#e74c3c',
-            'bg_boton_success': '#27ae60', 'bg_boton_warning': '#f39c12',
-            'texto_principal': '#ffffff', 'texto_secundario': '#bdc3c7',
-            'texto_accent': '#e94560'
+            'bg_principal': '#23272e',     
+            'bg_secundario': "#24363D",     
+            'bg_frame': "#ffffff",          
+            'bg_card': "#79bcff",           
+            'bg_accent': '#4f8cff',        
+            'bg_boton_primary': '#4f8cff',  
+            'bg_boton_hover': '#357ae8',    
+            'bg_boton_danger': '#e74c3c',  
+            'bg_boton_success': '#27ae60',  
+            'bg_boton_warning': '#f1c40f', 
+            'texto_principal': '#23272e',   
+            'texto_secundario': '#4f5b6e',
+            'texto_accent': "#5588e7"   
         }
         self.root.configure(bg=self.colores['bg_principal'])
 
@@ -55,6 +60,19 @@ class SimuladorDados:
         style.map('Custom.TNotebook.Tab',
                   background=[('selected', self.colores['bg_card']),
                               ('active', self.colores['bg_boton_hover'])])
+
+        style.configure('Accent.TButton',
+            font=('Segoe UI', 11, 'bold'),
+            background=self.colores['bg_boton_primary'],
+            foreground=self.colores['texto_principal'],
+            borderwidth=0,
+            focusthickness=3,
+            focuscolor=self.colores['bg_boton_hover'],
+            padding=10
+        )
+        style.map('Accent.TButton',
+            background=[('active', self.colores['bg_boton_hover']), ('pressed', self.colores['bg_boton_success'])]
+        )
 
     def create_widgets(self):
         """Crear todos los widgets de la interfaz."""
@@ -96,28 +114,33 @@ class SimuladorDados:
                  bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).pack(pady=8)
         input_container = tk.Frame(left_panel, bg=self.colores['bg_frame'])
         input_container.pack(padx=15, pady=(0, 15), fill=tk.X)
-        tk.Label(input_container, text="Número de lanzamientos:", font=('Segoe UI', 9, 'bold'),
-                 bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).pack(anchor='w')
-        self.entry_lanzamientos = tk.Entry(input_container, font=('Segoe UI', 10), width=15,
+
+        # --- Cambia aquí para centrar los controles ---
+        controls_frame = tk.Frame(input_container, bg=self.colores['bg_frame'])
+        controls_frame.pack(pady=0)
+        controls_frame.grid_columnconfigure(0, weight=1)
+        controls_frame.grid_columnconfigure(1, weight=1)
+
+        tk.Label(controls_frame, text="Número de lanzamientos:", font=('Segoe UI', 9, 'bold'),
+                 bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).grid(row=0, column=0, sticky='e', padx=5, pady=3)
+        self.entry_lanzamientos = tk.Entry(controls_frame, font=('Segoe UI', 10), width=15,
                                            bg='#2c3e50', fg=self.colores['texto_principal'],
                                            insertbackground=self.colores['texto_principal'])
         self.entry_lanzamientos.insert(0, "10000")
-        self.entry_lanzamientos.pack(anchor='w', pady=(3, 8))
-        tk.Label(input_container, text="Número de dados:", font=('Segoe UI', 9, 'bold'),
-                 bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).pack(anchor='w')
-        self.combo_dados = ttk.Combobox(input_container, values=[1, 2, 3], state='readonly', width=12)
+        self.entry_lanzamientos.grid(row=0, column=1, sticky='w', padx=5, pady=3)
+
+        tk.Label(controls_frame, text="Número de dados:", font=('Segoe UI', 9, 'bold'),
+                 bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).grid(row=1, column=0, sticky='e', padx=5, pady=3)
+        self.combo_dados = ttk.Combobox(controls_frame, values=[1, 2, 3], state='readonly', width=12)
         self.combo_dados.set(3)
-        self.combo_dados.pack(anchor='w', pady=(3, 0))
+        self.combo_dados.grid(row=1, column=1, sticky='w', padx=5, pady=3)
 
         # Contenido del panel derecho (Acciones)
         tk.Label(right_panel, text="ACCIONES", font=('Segoe UI', 10, 'bold'),
                  bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).pack(pady=8)
         button_container = tk.Frame(right_panel, bg=self.colores['bg_frame'])
         button_container.pack(padx=15, pady=(0, 15))
-        self.btn_simular = tk.Button(button_container, text="SIMULAR", font=('Segoe UI', 11, 'bold'),
-                                     bg=self.colores['bg_boton_primary'], fg=self.colores['texto_principal'],
-                                     activebackground=self.colores['bg_boton_hover'], bd=0, padx=25, pady=8,
-                                     cursor='hand2', command=self.iniciar_simulacion)
+        self.btn_simular = ttk.Button(button_container, text="SIMULAR", style='Accent.TButton', command=self.iniciar_simulacion)
         self.btn_simular.pack(pady=3)
         self.btn_limpiar = tk.Button(button_container, text="LIMPIAR", font=('Segoe UI', 10, 'bold'),
                                      bg=self.colores['bg_boton_danger'], fg=self.colores['texto_principal'],
@@ -141,13 +164,27 @@ class SimuladorDados:
         self.notebook = ttk.Notebook(notebook_container, style='Custom.TNotebook')
         self.notebook.grid(row=0, column=0, sticky='nsew')
 
-        # Pestaña de Gráficos
-        self.graph_frame = tk.Frame(self.notebook, bg=self.colores['bg_secundario'])
-        self.notebook.add(self.graph_frame, text="GRÁFICOS VISUALES")
-        
-        # Configurar el grid del 'graph_frame' para que el contenido se expanda
-        self.graph_frame.grid_rowconfigure(0, weight=1)
-        self.graph_frame.grid_columnconfigure(0, weight=1)
+        # --- NUEVO: Frame con scroll para los gráficos ---
+        self.graph_outer = tk.Frame(self.notebook, bg=self.colores['bg_principal'])
+        self.graph_outer.grid_rowconfigure(0, weight=1)
+        self.graph_outer.grid_columnconfigure(0, weight=1)
+
+        self.graph_canvas = tk.Canvas(self.graph_outer, bg=self.colores['bg_principal'], highlightthickness=0)
+        self.graph_canvas.grid(row=0, column=0, sticky='nsew')
+
+        v_scroll = tk.Scrollbar(self.graph_outer, orient='vertical', command=self.graph_canvas.yview)
+        v_scroll.grid(row=0, column=1, sticky='ns')
+        self.graph_canvas.configure(yscrollcommand=v_scroll.set)
+
+        # Frame real donde van los gráficos
+        self.graph_frame = tk.Frame(self.graph_canvas, bg=self.colores['bg_secundario'])
+        self.graph_window_id = self.graph_canvas.create_window((0, 0), window=self.graph_frame, anchor='nw')
+
+        # Limitar tamaño máximo del área de gráficos
+        self.graph_frame.bind("<Configure>", lambda e: self.graph_canvas.configure(scrollregion=self.graph_canvas.bbox("all")))
+        self.graph_canvas.bind('<Configure>', self._limit_graph_width)
+
+        self.notebook.add(self.graph_outer, text="GRÁFICOS VISUALES")
 
         # Pestaña de Análisis
         self.analysis_frame = tk.Frame(self.notebook, bg=self.colores['bg_secundario'])
@@ -158,6 +195,11 @@ class SimuladorDados:
         
         # Crear el área de texto para el análisis
         self.create_analysis_area()
+
+    def _limit_graph_width(self, event):
+        # Permite que el área de gráficos use todo el ancho disponible
+        if hasattr(self, 'graph_window_id'):
+            self.graph_canvas.itemconfig(self.graph_window_id, width=event.width)
 
     def create_analysis_area(self):
         """Crear el área de texto para mostrar los resultados del análisis."""

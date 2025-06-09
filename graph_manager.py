@@ -35,7 +35,9 @@ class GraphManager:
         self.container_frame = tk.Frame(self.parent_frame, bg=self.colores['bg_frame'])
         self.container_frame.grid(row=0, column=0, sticky='nsew')
 
-        # Configurar el grid del frame contenedor
+        # Configurar el grid para que se expanda
+        self.parent_frame.grid_rowconfigure(0, weight=1)
+        self.parent_frame.grid_columnconfigure(0, weight=1)
         self.container_frame.grid_rowconfigure(0, weight=1)
         self.container_frame.grid_columnconfigure(0, weight=1)
 
@@ -175,47 +177,53 @@ class GraphManager:
     def resize_figure(self, width, height):
         """Redimensionar la figura según el tamaño del contenedor"""
         try:
-            if abs(width - self.last_size[0]) < 10 and abs(height - self.last_size[1]) < 10:
-                return
-            
+            # Remover la verificación de tamaño mínimo que limita el crecimiento
             self.last_size = (width, height)
             dpi = self.fig.dpi
-            width_inch = max(6, (width - 5) / dpi)
-            height_inch = max(4, (height - 5) / dpi)
-            width_inch = min(width_inch, 30)
-            height_inch = min(height_inch, 25)
             
+            # Calcular nuevo tamaño manteniendo proporción
+            width_inch = width / dpi
+            height_inch = height / dpi
+            
+            # Mantener una proporción razonable
             aspect_ratio = width_inch / height_inch
             if aspect_ratio > 2.5:
                 height_inch = width_inch / 2.0
             elif aspect_ratio < 0.7:
                 width_inch = height_inch * 1.0
             
-            self.fig.set_size_inches(width_inch, height_inch, forward=False)
+            # Actualizar tamaño de la figura
+            self.fig.set_size_inches(width_inch, height_inch, forward=True)
+            
+            # Ajustar espaciado
             self.adjust_subplot_spacing(width_inch, height_inch)
-            self.canvas.draw_idle()
+            
+            # Forzar redibujado
+            self.fig.canvas.draw()
             self.canvas_widget.update_idletasks()
             
         except Exception as e:
-            pass
+            print(f"Error al redimensionar: {e}")
         finally:
             self.resize_job = None
-    
+
     def adjust_subplot_spacing(self, width_inch, height_inch):
         """Ajustar espaciado de subplots según el tamaño"""
-        base_hspace, base_wspace, base_left, base_right, base_top, base_bottom = 0.4, 0.3, 0.08, 0.95, 0.88, 0.12
-        
-        if width_inch > 20: wspace, left, right = 0.15, 0.04, 0.98
-        elif width_inch > 15: wspace, left, right = 0.20, 0.06, 0.96
-        elif width_inch > 12: wspace, left, right = 0.25, 0.07, 0.95
-        else: wspace, left, right = base_wspace, base_left, base_right
-        
-        if height_inch > 15: hspace, top, bottom = 0.25, 0.92, 0.08
-        elif height_inch > 12: hspace, top, bottom = 0.30, 0.90, 0.10
-        elif height_inch > 8: hspace, top, bottom = 0.35, 0.88, 0.12
-        else: hspace, top, bottom = base_hspace, base_top, base_bottom
-        
-        self.fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom, wspace=wspace, hspace=hspace)
+        # Ajustar el espaciado según el tamaño
+        if width_inch > height_inch:
+            # Para ventanas anchas
+            self.fig.subplots_adjust(
+                left=0.08, right=0.95,
+                bottom=0.1, top=0.9,
+                wspace=0.25, hspace=0.35
+            )
+        else:
+            # Para ventanas altas
+            self.fig.subplots_adjust(
+                left=0.12, right=0.95,
+                bottom=0.08, top=0.92,
+                wspace=0.3, hspace=0.4
+            )
     
     def clear_all_graphs(self):
         """Limpiar todos los gráficos"""
@@ -254,16 +262,22 @@ class GraphManager:
         labels = [f"Cara {i}" for i in valores]
         self.store_tooltip_data(0, valores, frecuencias, labels)
 
-        bars = ax.bar(valores, frecuencias, alpha=0.8, color='#3498DB', edgecolor='#2C3E50', linewidth=1)
+        bars = ax.bar(valores, frecuencias, alpha=0.85, color=['#00B894', '#00CEC9', '#0984E3', '#6C5CE7', '#FD79A8', '#E17055'],
+              edgecolor='#222f3e', linewidth=2)
+        ax.set_facecolor('#f1f2f6')
+        ax.set_title(f' 1 Dado - Distribución\n({len(simulator.resultados_1_dado):,} lanzamientos)', fontweight='bold', fontsize=13, color='#0984E3')
+        ax.set_xlabel('Resultado del dado', fontweight='bold', fontsize=11, color='#636e72')
+        ax.set_ylabel('Frecuencia', fontweight='bold', fontsize=11, color='#636e72')
+        
         max_freq = max(frecuencias) if frecuencias else 1
         for bar in bars:
             height = bar.get_height()
             if height > 0:
                 ax.text(bar.get_x() + bar.get_width()/2., height + max_freq*0.01, f'{height:,}', ha='center', va='bottom', fontweight='bold', fontsize=8)
         
-        ax.set_title(f'1 Dado - Distribucion\n({len(simulator.resultados_1_dado):,} lanzamientos)', fontweight='bold')
-        ax.set_xlabel('Resultado del dado', fontweight='bold')
-        ax.set_ylabel('Frecuencia', fontweight='bold')
+        ax.set_title(f' 1 Dado - Distribución\n({len(simulator.resultados_1_dado):,} lanzamientos)', fontweight='bold', fontsize=13, color='#0984E3')
+        ax.set_xlabel('Resultado del dado', fontweight='bold', fontsize=11, color='#636e72')
+        ax.set_ylabel('Frecuencia', fontweight='bold', fontsize=11, color='#636e72')
         ax.set_xticks(valores)
         ax.grid(True, alpha=0.3, linestyle='--')
     

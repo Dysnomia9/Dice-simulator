@@ -232,6 +232,13 @@ class DiceSimulator:
             else:
                 texto += f"    Convergencia moderada (diff ≥ 10%)\n"
         
+        # Conteo detallado de cada cara
+        texto += f"\n LISTADO DE FRECUENCIAS POR CARA:\n"
+        texto += "─" * 50 + "\n"
+        for i in range(1, 7):
+            count = contador.get(i, 0)
+            texto += f"   Cara {i}: {count:6,} veces\n"
+        
         texto += "\n"
         return texto
 
@@ -276,6 +283,18 @@ class DiceSimulator:
         texto += f"     Experimental: {prob_al_menos_uno_exp:.4f} ({prob_al_menos_uno_exp*100:.2f}%)\n"
         texto += f"     Teórica:      {prob_al_menos_uno_teo:.4f} ({prob_al_menos_uno_teo*100:.2f}%)\n"
         texto += f"     Diferencia:   {abs(prob_al_menos_uno_exp - prob_al_menos_uno_teo):.4f}\n"
+
+        # Conteo detallado de cada cara en todos los dados
+        caras_contador = Counter()
+        for detalle in self.resultados_detallados["2"]:
+            for cara in detalle['dados']:
+                caras_contador[cara] += 1
+        total_caras = sum(caras_contador.values())
+        texto += f"\n LISTADO DE FRECUENCIAS POR CARA (en {total_caras:,} dados lanzados):\n"
+        texto += "─" * 50 + "\n"
+        for i in range(1, 7):
+            count = caras_contador.get(i, 0)
+            texto += f"   Cara {i}: {count:6,} veces\n"
         
         texto += "\n"
         return texto
@@ -302,7 +321,7 @@ class DiceSimulator:
             prob_teo = prob_teoricas[f"{i}_seises"]
             
             texto += f"   {i} seises: {count:6,} | Exp: {prob_exp:.4f} | Teó: {prob_teo:.4f}\n"
-        
+    
         # Estadísticas descriptivas
         texto += f"\n ESTADÍSTICAS DESCRIPTIVAS:\n"
         texto += "─" * 50 + "\n"
@@ -310,6 +329,18 @@ class DiceSimulator:
         texto += f"   Desviación estándar:        {estadisticas['desviacion_estandar']:.3f}\n"
         texto += f"   Mediana:                    {estadisticas['mediana']:.3f}\n"
         
+        # Conteo detallado de cada cara en todos los dados
+        caras_contador = Counter()
+        for detalle in self.resultados_detallados["3"]:
+            for cara in detalle['dados']:
+                caras_contador[cara] += 1
+        total_caras = sum(caras_contador.values())
+        texto += f"\n LISTADO DE FRECUENCIAS POR CARA (en {total_caras:,} dados lanzados):\n"
+        texto += "─" * 50 + "\n"
+        for i in range(1, 7):
+            count = caras_contador.get(i, 0)
+            texto += f"   Cara {i}: {count:6,} veces\n"
+    
         # Análisis de eventos raros
         exactamente_tres = contador.get(3, 0)
         prob_tres_exp = exactamente_tres / total if total > 0 else 0
