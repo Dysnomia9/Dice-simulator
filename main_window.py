@@ -115,7 +115,7 @@ class SimuladorDados:
         input_container = tk.Frame(left_panel, bg=self.colores['bg_frame'])
         input_container.pack(padx=15, pady=(0, 15), fill=tk.X)
 
-        # --- Cambia aquí para centrar los controles ---
+
         controls_frame = tk.Frame(input_container, bg=self.colores['bg_frame'])
         controls_frame.pack(pady=0)
         controls_frame.grid_columnconfigure(0, weight=1)
@@ -124,7 +124,7 @@ class SimuladorDados:
         tk.Label(controls_frame, text="Número de lanzamientos:", font=('Segoe UI', 9, 'bold'),
                  bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).grid(row=0, column=0, sticky='e', padx=5, pady=3)
         self.entry_lanzamientos = tk.Entry(controls_frame, font=('Segoe UI', 10), width=15,
-                                           bg='#2c3e50', fg=self.colores['texto_principal'],
+                                           bg="#ffffff", fg=self.colores['texto_principal'],
                                            insertbackground=self.colores['texto_principal'])
         self.entry_lanzamientos.insert(0, "10000")
         self.entry_lanzamientos.grid(row=0, column=1, sticky='w', padx=5, pady=3)
@@ -164,42 +164,115 @@ class SimuladorDados:
         self.notebook = ttk.Notebook(notebook_container, style='Custom.TNotebook')
         self.notebook.grid(row=0, column=0, sticky='nsew')
 
-        # --- NUEVO: Frame con scroll para los gráficos ---
+        # Frame con scroll para los gráficos
         self.graph_outer = tk.Frame(self.notebook, bg=self.colores['bg_principal'])
+        self.graph_outer.grid(row=0, column=0, sticky='nsew')
         self.graph_outer.grid_rowconfigure(0, weight=1)
         self.graph_outer.grid_columnconfigure(0, weight=1)
 
-        self.graph_canvas = tk.Canvas(self.graph_outer, bg=self.colores['bg_principal'], highlightthickness=0)
+        # Canvas con scrollbar
+        self.graph_canvas = tk.Canvas(self.graph_outer, bg=self.colores['bg_principal'], 
+                                    highlightthickness=0)
         self.graph_canvas.grid(row=0, column=0, sticky='nsew')
 
-        v_scroll = tk.Scrollbar(self.graph_outer, orient='vertical', command=self.graph_canvas.yview)
+        # Scrollbar vertical
+        v_scroll = tk.Scrollbar(self.graph_outer, orient='vertical', 
+                             command=self.graph_canvas.yview)
         v_scroll.grid(row=0, column=1, sticky='ns')
+        
+        # Configurar el canvas para usar el scrollbar
         self.graph_canvas.configure(yscrollcommand=v_scroll.set)
 
         # Frame real donde van los gráficos
         self.graph_frame = tk.Frame(self.graph_canvas, bg=self.colores['bg_secundario'])
-        self.graph_window_id = self.graph_canvas.create_window((0, 0), window=self.graph_frame, anchor='nw')
+        self.graph_frame.grid(row=0, column=0, sticky='nsew')
+        self.graph_frame.grid_rowconfigure(0, weight=1)
+        self.graph_frame.grid_columnconfigure(0, weight=1)
 
-        # Limitar tamaño máximo del área de gráficos
-        self.graph_frame.bind("<Configure>", lambda e: self.graph_canvas.configure(scrollregion=self.graph_canvas.bbox("all")))
-        self.graph_canvas.bind('<Configure>', self._limit_graph_width)
+        # Crear ventana dentro del canvas y ajustar tamaño mínimo
+        self.graph_window_id = self.graph_canvas.create_window(
+            (0, 0), 
+            window=self.graph_frame, 
+            anchor='nw',
+            width=self.graph_canvas.winfo_width(),
+            height=self.graph_canvas.winfo_height()  # Añadir altura
+        )
 
+        def _on_frame_configure(event):
+            """Actualizar scrollregion cuando el frame interno cambia"""
+            # Actualizar tamaño total del contenido
+            bbox = self.graph_frame.bbox("all")
+            
+            # Asegurar altura mínima del contenido
+            min_height = max(self.graph_canvas.winfo_height(), self.graph_frame.winfo_reqheight())
+            
+            # Configurar región scrollable con altura adecuada
+            self.graph_canvas.configure(
+                scrollregion=(
+                    bbox[0],  # x inicio
+                    bbox[1],  # y inicio
+                    bbox[2],  # x fin
+                    max(bbox[3], min_height * 2)  
+                )
+            )
+            
+            # Actualizar tamaño de la ventana interna
+            canvas_width = self.graph_canvas.winfo_width()
+            if canvas_width > 1:
+                self.graph_canvas.itemconfig(
+                    self.graph_window_id,
+                    width=canvas_width,
+                    height=max(bbox[3], min_height * 2)
+                )
+
+        def _on_canvas_configure(event):
+            """Actualizar tamaño cuando el canvas cambia"""
+            width = event.width
+            height = event.height
+            if width > 1 and height > 1:
+                # Actualizar tamaño del contenido
+                content_height = max(height * 2, self.graph_frame.winfo_reqheight())
+                self.graph_canvas.itemconfig(
+                    self.graph_window_id,
+                    width=width,
+                    height=content_height
+                )
+                # Actualizar región scrollable
+                self.graph_canvas.configure(scrollregion=(0, 0, width, content_height))
+
+        # Vincular eventos
+        self.graph_frame.bind("<Configure>", _on_frame_configure)
+        self.graph_canvas.bind('<Configure>', _on_canvas_configure)
+
+        # Configurar scroll con el mouse
+        def _on_mousewheel(event):
+            self.graph_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Vincular evento de rueda solo cuando el mouse está sobre el canvas
+        self.graph_canvas.bind('<Enter>', lambda e: self.graph_canvas.bind_all("<MouseWheel>", _on_mousewheel))
+        self.graph_canvas.bind('<Leave>', lambda e: self.graph_canvas.unbind_all("<MouseWheel>"))
+
+        # Añadir pestañas al notebook
         self.notebook.add(self.graph_outer, text="GRÁFICOS VISUALES")
 
         # Pestaña de Análisis
         self.analysis_frame = tk.Frame(self.notebook, bg=self.colores['bg_secundario'])
         self.notebook.add(self.analysis_frame, text="ANÁLISIS DETALLADO")
         
-        # Inicializar el gestor de gráficos (AHORA IMPORTADO DESDE graph_manager.py)
+        # Inicializar el gestor de gráficos
         self.graph_manager = GraphManager(self.graph_frame, self.colores)
         
         # Crear el área de texto para el análisis
         self.create_analysis_area()
 
     def _limit_graph_width(self, event):
-        # Permite que el área de gráficos use todo el ancho disponible
+        """Ajusta el ancho del frame interno al del canvas."""
         if hasattr(self, 'graph_window_id'):
-            self.graph_canvas.itemconfig(self.graph_window_id, width=event.width)
+            width = event.width
+            if width > 1: 
+                self.graph_canvas.itemconfig(self.graph_window_id, width=width)
+
+                self.graph_canvas.configure(scrollregion=self.graph_canvas.bbox("all"))
 
     def create_analysis_area(self):
         """Crear el área de texto para mostrar los resultados del análisis."""
