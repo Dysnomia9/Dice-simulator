@@ -139,8 +139,6 @@ Este proyecto es de uso libre y está disponible bajo licencia de código abiert
 
 **Ignacio Contreras Norambuena**
 
-Desarrollado como herramienta educativa para la enseñanza de conceptos probabilísticos y estadísticos.
+Desarrollado como herramienta educativa para la enseñanza de conceptos probabilísticos y estadísticos. en Matematica Aplicada II
 
 ---
-
-*Desarrollado con ❤️ para la educación en probabilidad y estadística*
