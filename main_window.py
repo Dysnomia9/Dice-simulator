@@ -45,9 +45,10 @@ class SimuladorDados:
             'bg_boton_danger': '#e74c3c',  
             'bg_boton_success': '#27ae60',  
             'bg_boton_warning': '#f1c40f', 
-            'texto_principal': '#23272e',   
-            'texto_secundario': '#4f5b6e',
-            'texto_accent': "#5588e7"   
+            'texto_principal': "#f8fbff",   
+            'texto_secundario': "#fefefe",
+            'texto_accent': "#5588e7",
+            'texto_input': "#111111" 
         }
         self.root.configure(bg=self.colores['bg_principal'])
 
@@ -126,8 +127,8 @@ class SimuladorDados:
         tk.Label(controls_frame, text="Número de lanzamientos:", font=('Segoe UI', 9, 'bold'),
                  bg=self.colores['bg_frame'], fg=self.colores['texto_principal']).grid(row=0, column=0, sticky='e', padx=5, pady=3)
         self.entry_lanzamientos = tk.Entry(controls_frame, font=('Segoe UI', 10), width=15,
-                                           bg="#ffffff", fg=self.colores['texto_principal'],
-                                           insertbackground=self.colores['texto_principal'])
+                                           bg="#ffffff", fg=self.colores['texto_input'],  # <--- Cambia aquí
+                                           insertbackground=self.colores['texto_input'])  # <--- Cambia aquí
         self.entry_lanzamientos.insert(0, "10000")
         self.entry_lanzamientos.grid(row=0, column=1, sticky='w', padx=5, pady=3)
 
@@ -231,7 +232,7 @@ class SimuladorDados:
         self.analysis_frame.grid_columnconfigure(0, weight=1)
         self.text_analysis = scrolledtext.ScrolledText(
             self.analysis_frame, font=('Consolas', 10), bg=self.colores['bg_frame'],
-            fg=self.colores['texto_principal'], wrap=tk.WORD, relief=tk.FLAT, bd=0
+            fg=self.colores['texto_input'], wrap=tk.WORD, relief=tk.FLAT, bd=0   # <--- Cambia aquí
         )
         self.text_analysis.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
         self.text_analysis.insert(tk.END, "Bienvenido al Simulador de Dados.\n\n"
